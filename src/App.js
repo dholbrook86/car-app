@@ -1,6 +1,9 @@
 import React, {Component} from 'react';
 import ReactHighcharts from 'react-highcharts';
-import update from 'react-addons-update';
+// I'd like to put all my components inside a "components" directory, but react-create-app (boilerplate I chose to
+// try out defaults all imports to the node_modules folder. I didn't know this. I could "eject" the app but I want to keep all the configuration.
+import DropDown from './DropDown';
+
 import './App.css';
 
 /* Choosing Axios because it is isomorphic - Both node.js and the client can use the same calls. Makes server-side validation a snap
@@ -32,17 +35,20 @@ class App extends Component {
         this.state = {
             // A flat state makes it easier to update and prevents unwanted mutations
             // If you are working with a larger state USE REDUX
-            makes: {},
-            models: {},
-            yearsNew: [],
-            yearsUsed: [],
+            makes: "*",
+            models: "*",
+            yearsNew: "*",
+            yearsUsed: "*",
+            styles: "*",
 
             //Drop Down Selections
             selectedMake: '*',
-            selectedMake_data: {},
-            selectedModel_data: {},
+            selectedMakeName: '',
+            // selectedMake_data: {},
+            // selectedModel_data: {},
             selectedModel: '*',
             selectedYear: '*',
+            selectedStyle: '*',
         }
     }
 
@@ -61,20 +67,15 @@ class App extends Component {
             });
     }
 
-    changeModelHandler(e) {
-        this.setState({selectedModel: e.target.value},
-            () => {
-                let car = this.state.models[this.state.selectedModel];
-                if(car.years.NEW_USED){
-                    this.setState({yearsNew: car.years.NEW_USED});
-                }
-                if(car.years.USED){
-                    this.setState({yearsUsed: car.years.USED});
-                }
-            });
-    }
-
     changeMakeHandler(e) {
+        let selectedMakeName = null;
+
+        for (const key of Object.keys(this.state.makes)) {
+            if (String(this.state.makes[key].id) === e.target.value)
+                selectedMakeName = this.state.makes[key].niceName;
+        }
+
+        this.setState({selectedMakeName});
         this.setState({selectedMake: e.target.value},
             () => {
                 this.httpInstance.get('/v1/api/tco/getmodelswithtcodata', {
@@ -95,12 +96,25 @@ class App extends Component {
             })
     }
 
-    changeYearsHandler(e){
+    changeModelHandler(e) {
+        this.setState({selectedModel: e.target.value},
+            () => {
+                let car = this.state.models[this.state.selectedModel];
+                if (car.years.NEW_USED) {
+                    this.setState({yearsNew: car.years.NEW_USED});
+                }
+                if (car.years.USED) {
+                    this.setState({yearsUsed: car.years.USED});
+                }
+            });
+    }
+
+    changeYearsHandler(e) {
         this.setState({selectedYear: e.target.value},
             () => {
                 this.httpInstance.get('/v1/api/tco/getstyleswithtcodatabysubmodel', {
                     params: {
-                        make: this.state.models[this.state.selectedModel].nicemodel,
+                        make: this.state.selectedMakeName,
                         model: this.state.models[this.state.selectedModel].nicemodel,
                         year: this.state.selectedYear,
                         submodel: this.state.models[this.state.selectedModel].submodel,
@@ -108,9 +122,9 @@ class App extends Component {
                     }
                 })
                     .then((response) => {
-                        console.log(response);
+                        console.log("Styles: ", response);
                         this.setState({
-                            models: response.data.models
+                            styles: response.data.styles
                         })
                     })
                     .catch((error) => {
@@ -119,40 +133,28 @@ class App extends Component {
             });
     }
 
-    genMakeOptions() {
-        if (this.state.makes !== null) { //this waits for the data to come back and be assigned to `makes`
-            return Object.keys(this.state.makes).map((key)=> {
-                let val = this.state.makes[key];
-                return <option value={val.id} key={key}>{val.name}</option>;
-            });
-        }
-    }
-
-    genModelOptions() {
-        if (this.state.models !== null) {
-            return Object.keys(this.state.models).map((key)=> {
-                let val = this.state.models[key];
-                return <option value={key} key={key}>{val.name}</option>;
-            });
-        }
-    }
-
-    genYearsNewOptions(){
-        if (this.state.yearsNew !== null) {
-            return Object.keys(this.state.yearsNew).map((key)=> {
-                let val = this.state.yearsNew[key];
-                return <option value={val} key={key}>{val}</option>;
-            });
-        }
-    }
-
-    genYearsUsedOptions(){
-        if (this.state.yearsUsed !== null) {
-            return Object.keys(this.state.yearsUsed).map((key)=> {
-                let val = this.state.yearsUsed[key];
-                return <option value={val} key={key}>{val}</option>;
-            });
-        }
+    changeStyleHandler(e) {
+        this.setState({selectedYear: e.target.value},
+            () => {
+                this.httpInstance.get('/v1/api/tco/getstyleswithtcodatabysubmodel', {
+                    params: {
+                        make: this.state.selectedMakeName,
+                        model: this.state.models[this.state.selectedModel].nicemodel,
+                        year: this.state.selectedYear,
+                        submodel: this.state.models[this.state.selectedModel].submodel,
+                        fmt: 'json'
+                    }
+                })
+                    .then((response) => {
+                        console.log("Styles: ", response);
+                        this.setState({
+                            styles: response.data.styles
+                        })
+                    })
+                    .catch((error) => {
+                        console.log(error);
+                    });
+            })
     }
 
     render() {
@@ -170,22 +172,23 @@ class App extends Component {
                     <label>Make: </label>
                     <select value={this.state.selectedMake} onChange={e => this.changeMakeHandler(e)}>
                         <option disabled value='*'>Select a Make</option>
-                        {this.genMakeOptions()}
+                        <DropDown data={this.state.makes} type={"make"}/>
                     </select>
                     <label>Model: </label>
                     <select value={this.state.selectedModel} onChange={e => this.changeModelHandler(e)}>
                         <option disabled value='*'>Select a Model</option>
-                        {this.genModelOptions()}
+                        <DropDown data={this.state.models} type={"model"}/>
                     </select>
                     <label>New: </label>
-                    <select value={this.state.selectedYearsNew} onChange={e => this.changeYearsHandler(e)}>
-                        <option disabled value='*'>Select a Year - New</option>
-                        {this.genYearsNewOptions()}
+                    <select value={this.state.selectedYear} onChange={e => this.changeYearsHandler(e)}>
+                        <option disabled value='*'>Select a Year</option>
+                        <DropDown data={this.state.yearsNew} type={"new"}/>
+                        <DropDown data={this.state.yearsUsed} type={"used"}/>
                     </select>
-                    <label>Used: </label>
-                    <select value={this.state.selectedYearsUsed} onChange={e => this.changeYearsHandler(e)}>
-                        <option disabled value='*'>Select a Year - Used</option>
-                        {this.genYearsUsedOptions()}
+                    <label>Style: </label>
+                    <select value={this.state.selectedStyle} onChange={e => this.changeStyleHandler(e)}>
+                        <option disabled value='*'>Select a Style</option>
+                        <DropDown data={this.state.styles} type={"styles"}/>
                     </select>
                 </div>
                 <div className="row">
