@@ -1,3 +1,15 @@
+.container .inputs{
+  padding: 25px;
+}
+
+.submit-button{
+  display: inline;
+}
+
+.input-field{
+  display: inline;
+}
+
 .App {
   text-align: center;
 }

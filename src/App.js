@@ -1,8 +1,18 @@
-import React, {Component} from 'react';
-import ReactHighcharts from 'react-highcharts';
+/**
+ * Scraped Data from: http://www.edmunds.com/tco.html because True Cost API was down here: http://edmunds.mashery.com/io-docs */
+import fakeData from './fakeData'
+import React, { Component } from 'react';
+
+//Can't get the highcharts I want to work with react.
+//import ReactHighcharts from 'react-highcharts';
 // I'd like to put all my components inside a "components" directory, but react-create-app (boilerplate I chose to
-// try out defaults all imports to the node_modules folder. I didn't know this. I could "eject" the app but I want to keep all the configuration.
+// try out) defaults all imports to the node_modules folder. I didn't know this. I could "eject" the app but I want to keep all the configurations intact.
 import DropDown from './DropDown';
+
+//Design Stuff
+import Paper from 'material-ui/Paper';
+import RaisedButton from 'material-ui/RaisedButton';
+import AppBar from 'material-ui/AppBar';
 
 import './App.css';
 
@@ -21,14 +31,14 @@ class App extends Component {
             baseURL: 'https://api.edmunds.com',
             timeout: 5000
         });
-        this.httpInstance.interceptors.request.use((config) => {
+        this.httpInstance.interceptors.request.use(( config ) => {
             //Always send the api_key in the request
             if (!config.params) {
                 config.params = {}
             }
             config.params.api_key = this.api_key;
             return config;
-        }, function (error) {
+        }, function ( error ) {
             console.log(error);
             return Promise.reject(error);
         });
@@ -58,16 +68,17 @@ class App extends Component {
                 fmt: 'json'
             }
         })
-            .then((response) => {
+            .then(( response ) => {
                 console.log(response);
                 this.setState({makes: response.data.makes});
             })
-            .catch((error) => {
+            .catch(( error ) => {
                 console.log(error);
+                this.setState({makes: fakeData.makes});
             });
     }
 
-    changeMakeHandler(e) {
+    changeMakeHandler( e ) {
         let selectedMakeName = null;
 
         for (const key of Object.keys(this.state.makes)) {
@@ -84,19 +95,20 @@ class App extends Component {
                         fmt: 'json'
                     }
                 })
-                    .then((response) => {
+                    .then(( response ) => {
                         console.log(response);
                         this.setState({
                             models: response.data.models
                         })
                     })
-                    .catch((error) => {
+                    .catch(( error ) => {
                         console.log(error);
+                        this.setState({models: fakeData.models});
                     });
             })
     }
 
-    changeModelHandler(e) {
+    changeModelHandler( e ) {
         this.setState({selectedModel: e.target.value},
             () => {
                 let car = this.state.models[this.state.selectedModel];
@@ -109,7 +121,7 @@ class App extends Component {
             });
     }
 
-    changeYearsHandler(e) {
+    changeYearsHandler( e ) {
         this.setState({selectedYear: e.target.value},
             () => {
                 this.httpInstance.get('/v1/api/tco/getstyleswithtcodatabysubmodel', {
@@ -121,19 +133,20 @@ class App extends Component {
                         fmt: 'json'
                     }
                 })
-                    .then((response) => {
+                    .then(( response ) => {
                         console.log("Styles: ", response);
                         this.setState({
                             styles: response.data.styles
                         })
                     })
-                    .catch((error) => {
+                    .catch(( error ) => {
                         console.log(error);
+                        this.setState({styles: fakeData.styles});
                     });
             });
     }
 
-    changeStyleHandler(e) {
+    changeStyleHandler( e ) {
         this.setState({selectedYear: e.target.value},
             () => {
                 this.httpInstance.get('/v1/api/tco/getstyleswithtcodatabysubmodel', {
@@ -145,55 +158,53 @@ class App extends Component {
                         fmt: 'json'
                     }
                 })
-                    .then((response) => {
+                    .then(( response ) => {
                         console.log("Styles: ", response);
                         this.setState({
                             styles: response.data.styles
                         })
                     })
-                    .catch((error) => {
+                    .catch(( error ) => {
                         console.log(error);
                     });
             })
     }
 
     render() {
-        const hc_config = {
-            xAxis: {
-                categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-            },
-            series: [{
-                data: [29.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 295.6, 454.4]
-            }]
-        };
         return (
             <div className="container">
-                <div className="input-field col s12">
-                    <label>Make: </label>
-                    <select value={this.state.selectedMake} onChange={e => this.changeMakeHandler(e)}>
-                        <option disabled value='*'>Select a Make</option>
-                        <DropDown data={this.state.makes} type={"make"}/>
-                    </select>
-                    <label>Model: </label>
-                    <select value={this.state.selectedModel} onChange={e => this.changeModelHandler(e)}>
-                        <option disabled value='*'>Select a Model</option>
-                        <DropDown data={this.state.models} type={"model"}/>
-                    </select>
-                    <label>New: </label>
-                    <select value={this.state.selectedYear} onChange={e => this.changeYearsHandler(e)}>
-                        <option disabled value='*'>Select a Year</option>
-                        <DropDown data={this.state.yearsNew} type={"new"}/>
-                        <DropDown data={this.state.yearsUsed} type={"used"}/>
-                    </select>
-                    <label>Style: </label>
-                    <select value={this.state.selectedStyle} onChange={e => this.changeStyleHandler(e)}>
-                        <option disabled value='*'>Select a Style</option>
-                        <DropDown data={this.state.styles} type={"styles"}/>
-                    </select>
-                </div>
-                <div className="row">
-                    <ReactHighcharts config={hc_config}/>
-                </div>
+                <AppBar title="Edmunds True Cost to Own Calculator"></AppBar>
+                <Paper className="inputs" zDepth={2}>
+                    <div className="input-field">
+                        <label>Make: </label>
+                        <select value={this.state.selectedMake} onChange={e => this.changeMakeHandler(e)}>
+                            <option disabled value='*'>Select a Make</option>
+                            <DropDown data={this.state.makes} type={"make"}/>
+                        </select>
+                        <label>Model: </label>
+                        <select value={this.state.selectedModel} onChange={e => this.changeModelHandler(e)}>
+                            <option disabled value='*'>Select a Model</option>
+                            <DropDown data={this.state.models} type={"model"}/>
+                        </select>
+                        <label>New: </label>
+                        <select value={this.state.selectedYear} onChange={e => this.changeYearsHandler(e)}>
+                            <option disabled value='*'>Select a Year</option>
+                            <DropDown data={this.state.yearsNew} type={"new"}/>
+                            <DropDown data={this.state.yearsUsed} type={"used"}/>
+                        </select>
+                        <label>Style: </label>
+                        <select value={this.state.selectedStyle} onChange={e => this.changeStyleHandler(e)}>
+                            <option disabled value='*'>Select a Style</option>
+                            <DropDown data={this.state.styles} type={"styles"}/>
+                        </select>
+                    </div>
+                    <div className="submit-button">
+                        <RaisedButton label="Add"/>
+                    </div>
+                    <div className="row">
+                        {/*<ReactHighcharts config={fakeData.chart}/>*/}
+                    </div>
+                </Paper>
             </div>
         );
     }
